@@ -6,6 +6,28 @@ The assignment is about a portable robot simulator developed by [Student Robotic
 This solution is developed by Francesco Ferrazzi 5262829.
 
 
+Table of Contents
+-----------------------
+- [Assignment 1 - Robot Simulator](#assignment-1---robot-simulator)
+  * [Installing and running](#installing-and-running)
+  * [Exercise](#exercise)
+  * [Robot API](#robot-api)
+    + [Motors](#motors)
+    + [The Grabber](#the-grabber)
+    + [Vision](#vision)
+  * [Robot Functions](#robot-functions)
+    + [Drive](#drive)
+    + [Drive Circle Left and Drive Circle Right](#drive-circle-left-and-drive-circle-right)
+    + [Turn](#turn)
+    + [Find Silver Token](#find-silver-token)
+    + [Find Closest Golden Token Front](#find-closest-golden-token-front)
+    + [Find Closest Golden Left and Find Closest Golden Right](#find-closest-golden-left-and-find-closest-golden-right)
+    + [Find Closest Golden Token Collide](#find-closest-golden-token-collide)
+    + [Avoid Collision](#avoid-collision)
+    + [Grab Silver](#grab-silver)
+    * [Main Function](#main-function)
+  * [Possible Improvements](#possible-improvements)
+
 
 Installing and running
 ----------------------
@@ -25,7 +47,11 @@ The aim of the assignment is to write a script that allows a robot, which is equ
 - avoiding touching the golden boxes;
 - when the robot is close to a silver box, it should grab it, and move it behind itself.
 
-To run the program is sufficient to type the following command in the terminal:
+If the folder, in which the code is placed in GitHUB, is downloaded and placed in the Desktop of the computer, to run the program is sufficient to type the following commands in the terminal:
+
+```bash
+$ cd Desktop/python_simulator/robot-sim
+```
 
 ```bash
 $ python run.py assignment.py
@@ -107,7 +133,7 @@ The function gets as arguments `speed` and `seconds`.
 The motors of both wheels are setted at the same speed which is kept for a given time, expressed in seconds. Once the time is over, the motors reset to `0`.
 
 ```
-**function drive**  (speed, seconds)
+function drive (speed, seconds)
 
 right.motor set to speed
 left.motor set to speed
@@ -124,7 +150,7 @@ The difference is that, one of the two motors is setted to have a higher speed t
 In this way, the possibility of collide in the same row of the golden token just avoided decreases.
 
 ```
-**function drive_circle_left**  (speed, seconds)
+function drive_circle_left (speed, seconds)
 
 right.motor set to speed
 left.motor set to 1.2*speed
@@ -142,7 +168,7 @@ It gets as arguments `speed` and `seconds`.
 Differently from the `Drive` function, the `speed` of the motors is setted to be equal in module but opposite in direction. In this way the robot stays in the same position while it rotates.
 
 ```
-**function turn**  (speed, seconds)
+function turn (speed, seconds)
 
 right.motor set to speed
 left.motor set to -speed
@@ -162,7 +188,7 @@ The silver tokens, in order to be detected, need to be inside a chosen range, de
 In my solution the linear distance threshold (given beginning_dist) is setted to `100` and the angular region detected (angular_threshold) goes from `-60` to `+60` degrees
 
 ```
-**function find_silver_token** ()
+function find_silver_token ()
 
 giving a beginning_dist
 FOR token in the filed of view:
@@ -181,7 +207,7 @@ This function is very similar to the previous one explained. In fact, the only d
 The aim is the same: detect all the golden token in a given range in front of the robot.
 
 ```
-**function find_closest_golden_token_front** ()
+function find_closest_golden_token_front ()
 
 giving a beginning_dist
 FOR token in the filed of view:
@@ -210,7 +236,7 @@ The return value of the function is `True` if a golden token is detected in fron
 The range detected from the function is narrow in front of the robot and close to it. This is due to the fact that we need to be sure that a token in this range would lead to a collision. In my solution the linear distance threshold (given beginning_dist) is setted to `1.1` and the angular region detected (angular_threshold) goes from `-25` to `+25` degrees
 
 ```
-**function find_closest_golden_token_collide** ()
+function find_closest_golden_token_collide ()
 
 giving a beginning_dist
 out set to False
@@ -220,6 +246,62 @@ FOR token in the filed of view:
                   return out
 ELSE:
       return out //which is false
+```
+
+### Avoid Collision ###
+
+This function is called when a golden token is detected inside a threshold and the `find_closest_golden_token_collide` returns `True`. The aim of the function is to avoid the golden token that could lead to a collision. The decision is made calling the `find_closest_golden_token_left` and `find_closest_golden_token_right`. If the distance detected from the robot to the closest marker on the left is greater than the distance detected from the robot to the closest marker on the right, the robot should turn left. This is done because, if the robot is going to collide on the right it can't go there. There is more space for it to go on the left. Vice-versa, the robot should turn right. The robot should turn until in front of him there are no golden markers that are inside a given linear threshold.
+
+```
+function avoid_collision ()
+
+find_closest_golden_token_left // call the functions to have the distance from tokens to the left and right
+find_closest_golden_token_right
+IF distance from left is grater than distance from right:
+      turn left set to true
+      WHILE turn left is true:
+            turn left
+            IF distance from golden token in front is grater than a linear threshold:
+                  drive a bit on the left
+                  turn left set to False
+ELSE:
+      turn right set to true
+      WHILE turn right is true:
+            turn right
+            IF distance from golden token in front is grater than a linear threshold:
+                  drive a bit on the right
+                  turn right set to False
+```
+
+### Grab Silver ###
+
+The function is called when a silver token is inside a given range. If the robot can detect a token inside a given threshold, the robot needs to go towards the silver token.
+If the silver token is too far to be grabbed, the robot should adapt his position, step by step, in order to arrive as close as possible to the silver token. Once the robot is close enough to the silver token, it grabs it, rotates of an angle of approximately `180` degrees, leave the token behind itself and go back to the normal behavior. The direction in which the robot rotates when it grabs the silver token is given calling the `find_closest_golden_token_left` and `find_closest_golden_token_right` functions. In this way i can compare the distance between the robot and the golden tokens by it. The robot rotates in the direction in which the is more space to go in order to avoid possible collisions while is grabbing a silver token.
+
+```
+function grab_silver ()
+
+IF robot is close enough to grab the token it grabs it:
+      find_closest_golden_token_left  // call the functions to have the distance from tokens to the left and right
+      find_closest_golden_token_right
+      IF distance from left golden token is grater than distance from right golden token:
+            turn left
+      ELSE:
+            turn right
+      drive straight a bit
+      release the silver token
+      drive reverse a bit
+      IF distance from left golden token is grater than distance from right golden token:
+            turn right
+      ELSE:
+            turn left
+ELSE:
+      IF robot is right oriented in respect to the silver token:
+            drive straight a bit
+      IF robot is oriented with an offset to the right in respect to the silver token:
+            turn left a bit
+      ELSE:
+            turn right a bit
 ```
 
 ### Main Function ###
@@ -234,27 +316,32 @@ The three main points are:
 
 At each cycle of the while loop, before checking anything, the main calls the `find_silver_token`, `find_closest_golden_token_front` and `find_closest_golden_token_collide` functions in order to have all the informations needed in the next points
 
-1. Using the `find_closest_golden_token_front` and `find_closest_golden_token_collide` the robot detects that he is too close to a golden token that could lead to a collision. If the answer is true, the robot makes a decision and it turn left or right in order to avoid the golden token. The decision is made calling the `find_closest_golden_token_left` and `find_closest_golden_token_right`. If the distance detected from the robot to the closest marker on the left is greater than the distance detected from the robot to the closest marker on the right, the robot should turn left because there is more space for him to go. Vice-versa, the robot should turn right. The robot should turn until in front of him there are no golden markers that are inside a given linear threshold.
+1. Using the `find_closest_golden_token_front` and `find_closest_golden_token_collide` the robot detects that he is too close to a golden token that could lead to a collision. If the answer is true, the robot calls the `avoid_collision` function.
 
 ```
 IF distance from golden token in front is less than a linear threshold AND find_closest_golden_token_collide is True:
-      find_closest_golden_token_left // call the functions to have the distance from tokens to the left and right
-      find_closest_golden_token_right
-      IF distance from left is grater than distance from right:
-            turn left set to true
-            WHILE turn left is true:
-                  turn left
-                  IF distance from golden token in front is grater than a linear threshold:
-                        drive a bit on the left
-                        turn left set to False
-      ELSE:
-            turn right set to true
-            WHILE turn right is true:
-                  turn right
-                  IF distance from golden token in front is grater than a linear threshold:
-                        drive a bit on the right
-                        turn right set to False
+      avoid collision with golden token
+```
 
-     ```
+2. When the distance between the robot and the silver token ,detected by the `find_silver_token` function, is less than a given linear threshold, the function `grab_silver` is called.
 
-2.
+```
+IF distance from silver token is less than a linear threshold:
+      grab the silver token detected
+```
+
+3. When the robot is nether close to a golden nor a silver token, it should drive straight.
+
+```
+IF distance from silver token is grater than a linear threshold AND distance from golden token is grater than a linear threshold AND the collision detector function returns False:
+      drive straight
+```
+
+Possible Improvements
+-------------------------------
+
+Possible improvements to the code could be:
+1. Make the robot accomplish the full path regarding the arena in a given time.
+This would be a challenge thought for the optimization of the code and make the robot go faster and faster setting a more restrictive time at each cycle until it's found the lowest time possible.
+2. Make the robot drive in a path that will make the robot to be as centered as possible for each hallway in the arena. This would be a challenge for the precision and accuracy of the robot while it's moving around the arena.
+3. Another improvement could be to decide when the robot should drive autonomously or guided by the user from standard inputs acquired from the keyboard.
